@@ -1,31 +1,37 @@
-pipeline {
-  agent { label 'master' }
-  options {
-    buildDiscarder(logRotator(numToKeepStr: '5'))
-  }
-  environment {
-    DOCKERHUB_CREDENTIALS = credentials('profan97-dockerhub')
-  }
-  stages {
-    stage('Build') {
-      steps {
-        sh 'docker build -t profan97/testoms .'
-      }
-    }
-    stage('Login') {
-      steps {
-        sh 'echo $DOCKERHUB_CREDENTIALS_PSW | docker login -u $DOCKERHUB_CREDENTIALS_USR --password-stdin'
-      }
-    }
-    stage('Push') {
-      steps {
-        sh 'docker push profan97/testoms'
-      }
-    }
-  }
-  post {
-    always {
-      sh 'docker logout'
-    }
-  }
+node {
+	def app
+	def image = 'registry.hub.docker.com/steblyatko/demo4'
+	def branch = 'main'
+	
+	try {
+		stage('Clone repository') {               
+	    	git branch: branch,
+	        	credentialsId: 'GitHub Credentials',
+	        	url: 'https://github.com/steblyatko/demo4.git'
+	    } 
+	
+		stage('Build WAR') {
+	    	docker.image('maven:3.6.2-jdk-11').inside('-v /root/.m2:/root/.m2') {
+	        	sh 'mvn -B clean package'
+	        	stash includes: '**/target/*.war', name: 'war'
+	    	}
+	    }
+	     
+	    stage('Build Image') {
+	    	unstash 'war'
+			app = docker.build image
+	    }
+	    
+	    stage('Push') {
+	    	docker.withRegistry('https://registry.hub.docker.com', 'docker-hub') {            
+				app.push("${env.BUILD_NUMBER}")
+	        }    
+	    }
+	} catch (e) {
+		echo 'Error occurred during build process!'
+		echo e.toString()
+		currentBuild.result = 'FAILURE'
+	} finally {
+        junit '**/target/surefire-reports/TEST-*.xml'		
+	}
 }
