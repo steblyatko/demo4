@@ -11,7 +11,7 @@ node {
     stage("Build Docker Image"){
         def dockerHome = tool name: 'docker', type: 'dockerTool'
         def dockerCMD = "${dockerHome}"
-        sh "docker build -t profan97/testoms:latest ."
+        sh "docker build -t profan97/oms_web_k8s:latest ."
     }
     stage("Push Docker Image"){
         withCredentials([string(credentialsId: 'docker-pwd', variable: 'dockerHubPwd')]) {
