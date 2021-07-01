@@ -17,7 +17,10 @@ node {
         withCredentials([string(credentialsId: 'docker-pwd', variable: 'dockerHubPwd')]) {
             sh "docker login -u profan97 -p ${dockerHubPwd}"
         }
-        sh 'docker push profan97/testoms:latest'
+        sh 'docker push profan97/oms_web_k8s:latest'
+    }
+    stage("Run Container on GKE"){
+        
     }
 }
 
